@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eLogística · Controle de Lavanderia e Brindes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="modal-backdrop open" id="login-gate">
+  <div class="modal">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div class="brand-mark" style="width:32px;height:32px;font-size:1rem">📦</div>
+      <h3 style="margin:0">eLogística</h3>
+    </div>
+    <p>Sistema interno de controle de estoque da <strong>[NOME DA SUA EMPRESA]</strong>. O login é exigido apenas para restringir o acesso aos dados de lavanderia e brindes à própria equipe — nenhum dado é compartilhado com terceiros.</p>
+    <div class="field">
+      <label for="login-email">E-mail da equipe</label>
+      <input type="text" id="login-email" placeholder="seu@email.com">
+    </div>
+    <div class="field">
+      <label for="login-senha">Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="login-btn" style="width:100%; justify-content:center">Entrar</button>
+    </div>
+    <p id="login-erro" style="color:var(--danger); font-size:.82rem; margin-top:10px; display:none"></p>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">📦</div>
+    <div>
+      eLogística
+      <small>Controle interno de fluxos</small>
+    </div>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Módulos">
+    <button class="btn btn-ghost btn-sm" id="logout-btn" style="display:none">Sair</button>
+    <button class="tab-btn" role="tab" aria-selected="true" data-tab="lavanderia"><span class="dot">🧺</span> Lavanderia</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="brindes"><span class="dot">🎁</span> Brindes</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- ===================== LAVANDERIA ===================== -->
+  <section id="panel-lavanderia" class="panel active">
+    <div class="module-head">
+      <h1 class="module-title">Controle de Lavanderia</h1>
+      <p class="module-sub">Registre saídas, confirme retornos e acompanhe a conciliação entre o que foi enviado e o que já voltou.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total enviado</div>
+        <div class="stat-value" id="lv-total-enviado">0 <span>peças</span></div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-label">Aguardando retorno</div>
+        <div class="stat-value" id="lv-aguardando">0 <span>peças</span></div>
+      </div>
+      <div class="stat-card diff">
+        <div class="stat-label">Diferença total</div>
+        <div class="stat-value" id="lv-diferenca">0 <span>peças</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ring-row">
+        <svg class="ring" width="64" height="64" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="27" fill="none" stroke="#E1E7EA" stroke-width="7"/>
+          <circle id="lv-ring-progress" cx="32" cy="32" r="27" fill="none" stroke="#0E8F82" stroke-width="7"
+                  stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"
+                  transform="rotate(-90 32 32)" style="transition:stroke-dashoffset .5s ease"/>
+          <text id="lv-ring-label" x="32" y="37" text-anchor="middle" font-size="14" font-weight="700" fill="#0E2A28" font-family="Space Grotesk, sans-serif">0%</text>
+        </svg>
+        <div class="ring-copy"><b>Conciliação de datas:</b> percentual de peças já retornadas em relação ao total enviado. Use isso para identificar remessas paradas com a lavanderia.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">🧺 Registrar nova saída</h2>
+      <p class="card-sub">Preencha os dados da remessa que está saindo para lavagem.</p>
+      <form id="form-saida" class="form-grid">
+        <div class="field">
+          <label for="lv-item">Item ou roupa</label>
+          <div class="row-inline">
+            <select id="lv-item" required></select>
+            <button type="button" class="btn-add-opt" data-add="lv-item" title="Adicionar novo item">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="lv-qtd">Qtd. de saída</label>
+          <input type="number" id="lv-qtd" min="1" step="1" placeholder="0" required>
+        </div>
+        <div class="field">
+          <label for="lv-unidade">Unidade</label>
+          <select id="lv-unidade">
+            <option value="Kg">Kg</option>
+            <option value="Unidade">Unidade</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="lv-data">Data da saída</label>
+          <input type="date" id="lv-data" required>
+        </div>
+        <div class="field">
+          <button type="submit" class="btn btn-primary">↗ Registrar saída</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">📋 Remessas em andamento</h2>
+      <p class="card-sub">Confirme o retorno assim que a lavanderia devolver as peças.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th><th>Qtd. saída</th><th>Data saída</th><th>Status</th>
+              <th>Qtd. retornada</th><th>Diferença</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lv-tbody"></tbody>
+        </table>
+      </div>
+      <div id="lv-empty" class="empty-state" style="display:none">
+        <div class="glyph">🧺</div>
+        <strong>Nenhuma remessa registrada</strong>
+        <p>Registre uma saída acima para começar a acompanhar os retornos.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BRINDES ===================== -->
+  <section id="panel-brindes" class="panel">
+    <div class="module-head">
+      <h1 class="module-title">Controle de Brindes e Materiais</h1>
+      <p class="module-sub">Monitore o estoque do time comercial e ajuste quantidades por entrada ou saída de materiais.</p>
+    </div>
+
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat-card" style="--accent:var(--amber)">
+        <div class="stat-label">Itens cadastrados</div>
+        <div class="stat-value" id="bd-total-itens">0</div>
+      </div>
+      <div class="stat-card ok">
+        <div class="stat-label">Peças em estoque</div>
+        <div class="stat-value" id="bd-total-estoque">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">🎁 Movimentar estoque</h2>
+      <p class="card-sub">Registre um novo brinde ou ajuste a quantidade de um item existente.</p>
+      <form id="form-brinde" class="form-grid">
+        <div class="field">
+          <label for="bd-item">Item / brinde</label>
+          <div class="row-inline">
+            <select id="bd-item" required></select>
+            <button type="button" class="btn-add-opt" data-add="bd-item" title="Adicionar novo brinde">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="bd-tipo">Movimentação</label>
+          <select id="bd-tipo">
+            <option value="entrada">Entrada (+)</option>
+            <option value="saida">Saída (−)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="bd-qtd">Quantidade</label>
+          <input type="number" id="bd-qtd" min="1" step="1" placeholder="0" required>
+        </div>
+        <div class="field">
+          <label for="bd-unidade">Unidade</label>
+          <select id="bd-unidade">
+            <option value="Unidade">Unidade</option>
+            <option value="Pacote">Pacote</option>
+            <option value="Caixa">Caixa</option>
+          </select>
+        </div>
+        <div class="field">
+          <button type="submit" class="btn btn-primary amber">💾 Salvar no estoque</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">📦 Inventário de materiais disponíveis</h2>
+      <p class="card-sub">Itens com menos de 5 unidades em estoque são sinalizados como estoque baixo.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Material / brinde</th><th>Quantidade disponível</th><th>Unidade</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="bd-tbody"></tbody>
+        </table>
+      </div>
+      <div id="bd-empty" class="empty-state" style="display:none">
+        <div class="glyph">🎁</div>
+        <strong>Nenhum brinde cadastrado</strong>
+        <p>Adicione um item acima para começar a controlar o estoque.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Modal: registrar retorno -->
+<div class="modal-backdrop" id="modal-retorno">
+  <div class="modal">
+    <h3>Registrar retorno</h3>
+    <p id="modal-retorno-sub">Informe quantos itens voltaram da lavanderia.</p>
+    <div class="field">
+      <label for="ret-qtd">Quantidade retornada</label>
+      <input type="number" id="ret-qtd" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="ret-data">Data do retorno</label>
+      <input type="date" id="ret-data">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="ret-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="ret-confirmar">Confirmar retorno</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

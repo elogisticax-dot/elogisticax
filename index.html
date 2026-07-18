@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="shortcut icon" href="https://img.icons8.com/?size=100&id=107714&format=png&color=000000" type="image/x-icon" />
 </head>
 <body>
 
@@ -98,7 +99,7 @@
         </div>
         <div class="field">
           <label for="lv-qtd">Qtd. de saída</label>
-          <input type="number" id="lv-qtd" min="1" step="1" placeholder="0" required>
+          <input type="number" id="lv-qtd" min="0.01" step="0.01" placeholder="0" required>
         </div>
         <div class="field">
           <label for="lv-unidade">Unidade</label>
@@ -221,7 +222,8 @@
     <p id="modal-retorno-sub">Informe quantos itens voltaram da lavanderia.</p>
     <div class="field">
       <label for="ret-qtd">Quantidade retornada</label>
-      <input type="number" id="ret-qtd" min="0" step="1">
+      <!-- modal de retorno -->
+      <input type="number" id="ret-qtd" min="0" step="0.01">
     </div>
     <div class="field">
       <label for="ret-data">Data do retorno</label>

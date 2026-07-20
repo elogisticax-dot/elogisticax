@@ -104,11 +104,20 @@
 
     remessas.forEach(it=>{
       const diff = Number(it.diferenca);
-      const isDone = it.status_calculado === 'retornado';
+      const isDone = it.status_calculado === 'entregue';
       const isLate = it.status_calculado === 'atrasado';
+
       let badge = `<span class="badge badge-wait">⏳ Aguardando</span>`;
-      if(isDone) badge = `<span class="badge badge-done">✔ Retornado</span>`;
+      if(isDone) badge = `<span class="badge badge-done">✔ Entregue</span>`;
       else if(isLate) badge = `<span class="badge badge-late">⚠ Atrasado</span>`;
+
+      let diffLabel = '—';
+      let diffColor = 'var(--text-muted)';
+      if(isDone){
+        if(diff > 0){ diffLabel = `+${diff} (sobrou)`; diffColor = 'var(--success)'; }
+        else if(diff < 0){ diffLabel = `${diff} (faltou)`; diffColor = 'var(--danger)'; }
+        else { diffLabel = '0 (exato)'; }
+      }
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -117,10 +126,10 @@
         <td data-label="Data saída" class="cell-muted">${fmtDate(it.data_saida)}</td>
         <td data-label="Status">${badge}</td>
         <td data-label="Qtd. retornada">${it.qtd_retornada > 0 ? it.qtd_retornada + ' ' + it.unidade : '—'}</td>
-        <td data-label="Diferença" class="${diff > 0 ? 'cell-strong' : 'cell-muted'}">${diff}</td>
+        <td data-label="Diferença" style="color:${diffColor};font-weight:700">${diffLabel}</td>
         <td data-label="Ações">
           <div class="actions-cell">
-            ${!isDone ? `<button class="btn btn-ghost btn-sm" data-action="retorno" data-id="${it.id}" data-item="${it.item}" data-unidade="${it.unidade}" data-restante="${diff}">Registrar retorno</button>` : ''}
+            ${!isDone ? `<button class="btn btn-ghost btn-sm" data-action="retorno" data-id="${it.id}" data-item="${it.item}" data-unidade="${it.unidade}" data-restante="${it.qtd_saida}">Registrar retorno</button>` : ''}
             <button class="btn btn-ghost btn-sm btn-icon" data-action="del-lv" data-id="${it.id}" title="Excluir">🗑</button>
           </div>
         </td>`;
@@ -128,12 +137,17 @@
     });
 
     const totalEnviado = Number(dashboard.total_enviado);
+    const totalRetornado = Number(dashboard.total_retornado);
     const aguardando = Number(dashboard.aguardando_retorno);
-    const totalRetornado = totalEnviado - aguardando;
+    const diferencaTotal = Number(dashboard.diferenca_total);
 
     document.getElementById('lv-total-enviado').innerHTML = `${totalEnviado} <span>peças</span>`;
     document.getElementById('lv-aguardando').innerHTML = `${aguardando} <span>peças</span>`;
-    document.getElementById('lv-diferenca').innerHTML = `${aguardando} <span>peças</span>`;
+
+    const diffEl = document.getElementById('lv-diferenca');
+    const sinal = diferencaTotal > 0 ? '+' : '';
+    diffEl.innerHTML = `${sinal}${diferencaTotal} <span>peças</span>`;
+    diffEl.style.color = diferencaTotal < 0 ? 'var(--danger)' : (diferencaTotal > 0 ? 'var(--success)' : '');
 
     const pct = totalEnviado > 0 ? Math.round((totalRetornado/totalEnviado)*100) : 0;
     const circumference = 169.6;
@@ -200,7 +214,7 @@
 
     if(btn.dataset.action === 'retorno'){
       retornoTarget = id;
-      document.getElementById('modal-retorno-sub').textContent = `${btn.dataset.item} · restante ${btn.dataset.restante} ${btn.dataset.unidade}`;
+      document.getElementById('modal-retorno-sub').textContent = `${btn.dataset.item} · enviado ${btn.dataset.restante} ${btn.dataset.unidade}`;
       document.getElementById('ret-qtd').value = btn.dataset.restante;
       document.getElementById('ret-data').value = todayISO();
       modalRetorno.classList.add('open');
@@ -227,10 +241,9 @@
     if(eSel){ toast('Erro ao buscar remessa', 'danger'); return; }
 
     const novaQtdRetornada = Number(remessa.qtd_retornada) + qtd;
-    const novoStatus = novaQtdRetornada >= remessa.qtd_saida ? 'retornado' : 'aguardando';
 
     const { error: eUpd } = await sb.from('lavanderia_remessas').update({
-      qtd_retornada: novaQtdRetornada, data_retorno, status: novoStatus
+      qtd_retornada: novaQtdRetornada, data_retorno, status: 'entregue'
     }).eq('id', retornoTarget);
     if(eUpd){ toast('Erro ao registrar retorno', 'danger'); return; }
 

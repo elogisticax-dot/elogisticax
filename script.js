@@ -126,7 +126,7 @@
         <td data-label="Data saída" class="cell-muted">${fmtDate(it.data_saida)}</td>
         <td data-label="Status">${badge}</td>
         <td data-label="Data retorno" class="cell-muted">${fmtDate(it.data_retorno)}</td>
-        <td data-label="Qtd. retornada">${it.qtd_retornada > 0 ? it.qtd_retornada + ' ' + it.unidade : '—'}</td>
+        <td data-label="Qtd. retornada">${it.qtd_retornada > 0 ? it.qtd_retornada + ' ' + it.unidade : '0'}</td>
         <td data-label="Diferença" style="color:${diffColor};font-weight:700">${diffLabel}</td>
         <td data-label="Ações">
           <div class="actions-cell">

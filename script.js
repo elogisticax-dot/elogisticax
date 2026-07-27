@@ -5,8 +5,10 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_rKELxoeBY1oRFwy8kbnSlw_m2g9rXV9';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const todayISO = () => new Date().toISOString().slice(0,10);
   const fmtDate = (iso) => { if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; };
+  const fmtDateLong = (iso) => { const [y,m,d]=iso.split('-'); return `${parseInt(d,10)} de ${MESES[parseInt(m,10)-1]} de ${y}`; };
 
   function toast(msg, type){
     const stack = document.getElementById('toast-stack');
@@ -97,44 +99,67 @@
   }
 
   function renderLavanderia(remessas, dashboard){
-    const tbody = document.getElementById('lv-tbody');
+    const container = document.getElementById('lv-timeline');
     const emptyEl = document.getElementById('lv-empty');
-    tbody.innerHTML = '';
+    container.innerHTML = '';
     emptyEl.style.display = remessas.length === 0 ? 'block' : 'none';
 
+    const groups = [];
+    const groupMap = new Map();
     remessas.forEach(it=>{
-      const diff = Number(it.diferenca);
-      const isDone = it.status_calculado === 'entregue';
-      const isLate = it.status_calculado === 'atrasado';
-
-      let badge = `<span class="badge badge-wait">⏳ Aguardando</span>`;
-      if(isDone) badge = `<span class="badge badge-done">✔ Entregue</span>`;
-      else if(isLate) badge = `<span class="badge badge-late">⚠ Atrasado</span>`;
-
-      let diffLabel = '—';
-      let diffColor = 'var(--text-muted)';
-      if(isDone){
-        if(diff > 0){ diffLabel = `+${diff} (sobrou)`; diffColor = 'var(--success)'; }
-        else if(diff < 0){ diffLabel = `${diff} (faltou)`; diffColor = 'var(--danger)'; }
-        else { diffLabel = '0 (exato)'; }
+      if(!groupMap.has(it.data_saida)){
+        const g = { data: it.data_saida, itens: [] };
+        groupMap.set(it.data_saida, g);
+        groups.push(g);
       }
+      groupMap.get(it.data_saida).itens.push(it);
+    });
 
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td data-label="Item" class="cell-strong">${it.item}</td>
-        <td data-label="Qtd. saída">${it.qtd_saida} ${it.unidade}</td>
-        <td data-label="Data saída" class="cell-muted">${fmtDate(it.data_saida)}</td>
-        <td data-label="Status">${badge}</td>
-        <td data-label="Data retorno" class="cell-muted">${fmtDate(it.data_retorno)}</td>
-        <td data-label="Qtd. retornada">${it.qtd_retornada > 0 ? it.qtd_retornada + ' ' + it.unidade : '0'}</td>
-        <td data-label="Diferença" style="color:${diffColor};font-weight:700">${diffLabel}</td>
-        <td data-label="Ações">
-          <div class="actions-cell">
-            ${!isDone ? `<button class="btn btn-ghost btn-sm" data-action="retorno" data-id="${it.id}" data-item="${it.item}" data-unidade="${it.unidade}" data-restante="${it.qtd_saida}">Registrar retorno</button>` : ''}
-            <button class="btn btn-ghost btn-sm btn-icon" data-action="del-lv" data-id="${it.id}" title="Excluir">🗑</button>
-          </div>
-        </td>`;
-      tbody.appendChild(tr);
+    groups.forEach(group=>{
+      const groupEl = document.createElement('div');
+      groupEl.className = 'timeline-group';
+
+      const itemsHtml = group.itens.map(it=>{
+        const diff = Number(it.diferenca);
+        const isDone = it.status_calculado === 'entregue';
+        const isLate = it.status_calculado === 'atrasado';
+
+        let badge = `<span class="badge badge-wait">⏳ Aguardando</span>`;
+        if(isDone) badge = `<span class="badge badge-done">✔ Entregue</span>`;
+        else if(isLate) badge = `<span class="badge badge-late">⚠ Atrasado</span>`;
+
+        let diffLabel = '';
+        let diffColor = 'var(--text-muted)';
+        if(isDone){
+          if(diff > 0){ diffLabel = `+${diff} (sobrou)`; diffColor = 'var(--success)'; }
+          else if(diff < 0){ diffLabel = `${diff} (faltou)`; diffColor = 'var(--danger)'; }
+          else { diffLabel = '0 (exato)'; }
+        }
+
+        return `
+          <div class="tl-item">
+            <span class="tl-name">${it.item}</span>
+            <span class="tl-qty">${it.qtd_saida} ${it.unidade}</span>
+            ${isDone ? `<span class="tl-qty">→ ${it.qtd_retornada} ${it.unidade} em ${fmtDate(it.data_retorno)}</span>` : ''}
+            <span class="tl-status">${badge}</span>
+            ${diffLabel ? `<span class="tl-diff" style="color:${diffColor}">${diffLabel}</span>` : ''}
+            <div class="tl-actions">
+              ${!isDone ? `<button class="btn btn-ghost btn-sm" data-action="retorno" data-id="${it.id}" data-item="${it.item}" data-unidade="${it.unidade}" data-restante="${it.qtd_saida}">Registrar retorno</button>` : ''}
+              <button class="btn btn-ghost btn-sm btn-icon" data-action="del-lv" data-id="${it.id}" title="Excluir">🗑</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      groupEl.innerHTML = `
+        <div class="tl-gutter">
+          <div class="tl-dot"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-card">
+          <div class="tl-date">${fmtDateLong(group.data)}</div>
+          ${itemsHtml}
+        </div>`;
+      container.appendChild(groupEl);
     });
 
     const totalEnviado = Number(dashboard.total_enviado);
@@ -208,7 +233,7 @@
   let retornoTarget = null;
   const modalRetorno = document.getElementById('modal-retorno');
 
-  document.getElementById('lv-tbody').addEventListener('click', async (e)=>{
+  document.getElementById('lv-timeline').addEventListener('click', async (e)=>{
     const btn = e.target.closest('button');
     if(!btn) return;
     const id = btn.dataset.id;

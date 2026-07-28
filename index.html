@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -18,7 +21,7 @@
       <div class="brand-mark" style="width:32px;height:32px;font-size:1rem">📦</div>
       <h3 style="margin:0">eLogística</h3>
     </div>
-    <p>Sistema interno de controle de estoque da <strong>[NOME DA SUA EMPRESA]</strong>. O login é exigido apenas para restringir o acesso aos dados de lavanderia e brindes à própria equipe — nenhum dado é compartilhado com terceiros.</p>
+    <p>Sistema interno de controle de estoque.</p>
     <div class="field">
       <label for="login-email">E-mail da equipe</label>
       <input type="text" id="login-email" placeholder="seu@email.com">
@@ -42,20 +45,28 @@
       <small>Controle interno de fluxos</small>
     </div>
   </div>
-  <div class="tabs" role="tablist" aria-label="Módulos">
+  <div class="topbar-right">
+    <button class="btn btn-ghost btn-sm" id="btn-open-gerenciador">⚙️ Gerenciar Cadastros</button>
     <button class="btn btn-ghost btn-sm" id="logout-btn" style="display:none">Sair</button>
-    <button class="tab-btn" role="tab" aria-selected="true" data-tab="lavanderia"><span class="dot">🧺</span> Lavanderia</button>
-    <button class="tab-btn" role="tab" aria-selected="false" data-tab="brindes"><span class="dot">🎁</span> Brindes</button>
+    <div class="tabs" role="tablist" aria-label="Módulos">
+      <button class="tab-btn" role="tab" aria-selected="true" data-tab="lavanderia"><span class="dot">🧺</span> Lavanderia</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="brindes"><span class="dot">🎁</span> Brindes</button>
+    </div>
   </div>
 </div>
 
 <main>
 
-  <!-- ===================== LAVANDERIA ===================== -->
   <section id="panel-lavanderia" class="panel active">
-    <div class="module-head">
-      <h1 class="module-title">Controle de Lavanderia</h1>
-      <p class="module-sub">Registre saídas, confirme retornos e acompanhe a conciliação entre o que foi enviado e o que já voltou.</p>
+    <div class="module-head-row">
+      <div class="module-head">
+        <h1 class="module-title">Controle de Lavanderia</h1>
+        <p class="module-sub">Registre saídas, confirme retornos e acompanhe a conciliação.</p>
+      </div>
+      <div class="export-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-export-excel">📊 Exportar Excel</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-pdf">📄 Exportar PDF</button>
+      </div>
     </div>
 
     <div class="stats">
@@ -82,7 +93,7 @@
                   transform="rotate(-90 32 32)" style="transition:stroke-dashoffset .5s ease"/>
           <text id="lv-ring-label" x="32" y="37" text-anchor="middle" font-size="14" font-weight="700" fill="#0E2A28" font-family="Space Grotesk, sans-serif">0%</text>
         </svg>
-        <div class="ring-copy"><b>Conciliação de datas:</b> percentual de peças já retornadas em relação ao total enviado. Use isso para identificar remessas paradas com a lavanderia.</div>
+        <div class="ring-copy"><b>Conciliação de datas:</b> percentual de peças já retornadas em relação ao total enviado.</div>
       </div>
     </div>
 
@@ -94,7 +105,7 @@
           <label for="lv-item">Item ou roupa</label>
           <div class="row-inline">
             <select id="lv-item" required></select>
-            <button type="button" class="btn-add-opt" data-add="lv-item" title="Adicionar novo item">+</button>
+            <button type="button" class="btn-add-opt" id="btn-open-modal-lv" title="Cadastrar novo item com unidade">+</button>
           </div>
         </div>
         <div class="field">
@@ -103,10 +114,7 @@
         </div>
         <div class="field">
           <label for="lv-unidade">Unidade</label>
-          <select id="lv-unidade">
-            <option value="Kg">Kg</option>
-            <option value="Unidade">Unidade</option>
-          </select>
+          <select id="lv-unidade" class="select-unidade-dynamic"></select>
         </div>
         <div class="field">
           <label for="lv-data">Data da saída</label>
@@ -119,22 +127,39 @@
     </div>
 
     <div class="card">
-      <h2 class="card-title">📋 Remessas em andamento</h2>
-      <p class="card-sub">Confirme o retorno assim que a lavanderia devolver as peças.</p>
+      <div class="card-head-filter">
+        <div>
+          <h2 class="card-title">📋 Remessas em andamento</h2>
+          <p class="card-sub">Confirme o retorno assim que a lavanderia devolver as peças.</p>
+        </div>
+        <div class="filters-row">
+          <input type="text" id="lv-search" placeholder="🔍 Buscar por item..." class="input-search">
+          <div class="date-filter-wrapper">
+            <input type="date" id="lv-search-date" class="input-search" title="Filtrar por data de saída">
+            <button type="button" id="btn-clear-date" class="btn-clear-date" title="Limpar filtro de data" style="display:none">✕</button>
+          </div>
+          <select id="lv-filter-status" class="select-filter">
+            <option value="todos">Todos os status</option>
+            <option value="aguardando">⏳ Aguardando</option>
+            <option value="atrasado">⚠️ Atrasado</option>
+            <option value="entregue">✔ Entregue</option>
+          </select>
+        </div>
+      </div>
+
       <div class="timeline" id="lv-timeline"></div>
       <div id="lv-empty" class="empty-state" style="display:none">
         <div class="glyph">🧺</div>
-        <strong>Nenhuma remessa registrada</strong>
-        <p>Registre uma saída acima para começar a acompanhar os retornos.</p>
+        <strong>Nenhuma remessa encontrada</strong>
+        <p>Ajuste os filtros de busca ou registre uma nova saída acima.</p>
       </div>
     </div>
   </section>
 
-  <!-- ===================== BRINDES ===================== -->
   <section id="panel-brindes" class="panel">
     <div class="module-head">
       <h1 class="module-title">Controle de Brindes e Materiais</h1>
-      <p class="module-sub">Monitore o estoque do time comercial e ajuste quantidades por entrada ou saída de materiais.</p>
+      <p class="module-sub">Monitore o estoque do time comercial e ajuste quantidades.</p>
     </div>
 
     <div class="stats" style="grid-template-columns:repeat(2,1fr)">
@@ -156,7 +181,7 @@
           <label for="bd-item">Item / brinde</label>
           <div class="row-inline">
             <select id="bd-item" required></select>
-            <button type="button" class="btn-add-opt" data-add="bd-item" title="Adicionar novo brinde">+</button>
+            <button type="button" class="btn-add-opt" id="btn-open-modal-bd" title="Cadastrar novo brinde com unidade">+</button>
           </div>
         </div>
         <div class="field">
@@ -172,11 +197,7 @@
         </div>
         <div class="field">
           <label for="bd-unidade">Unidade</label>
-          <select id="bd-unidade">
-            <option value="Unidade">Unidade</option>
-            <option value="Pacote">Pacote</option>
-            <option value="Caixa">Caixa</option>
-          </select>
+          <select id="bd-unidade" class="select-unidade-dynamic"></select>
         </div>
         <div class="field">
           <button type="submit" class="btn btn-primary amber">💾 Salvar no estoque</button>
@@ -186,7 +207,7 @@
 
     <div class="card">
       <h2 class="card-title">📦 Inventário de materiais disponíveis</h2>
-      <p class="card-sub">Itens com menos de 5 unidades em estoque são sinalizados como estoque baixo.</p>
+      <p class="card-sub">Itens com menos de 5 unidades em estoque são sinalizados.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -205,7 +226,103 @@
 
 </main>
 
-<!-- Modal: registrar retorno -->
+<div class="modal-backdrop" id="modal-novo-item">
+  <div class="modal">
+    <h3 id="modal-item-title">Cadastrar Novo Item</h3>
+    <p>Insira o nome do material e defina a sua unidade de medida padrão.</p>
+    <input type="hidden" id="modal-item-origem" value="lavanderia">
+    <div class="field">
+      <label for="new-item-nome">Nome do item / roupa / brinde</label>
+      <input type="text" id="new-item-nome" placeholder="Ex: Lençol Marrom, MOP Branco..." required>
+    </div>
+    <div class="field">
+      <label for="new-item-unidade">Unidade Padrão</label>
+      <select id="new-item-unidade" class="select-unidade-dynamic"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modal-item-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="modal-item-salvar">Salvar no Banco</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-editar-item">
+  <div class="modal">
+    <h3>Editar Material</h3>
+    <p>Altere o nome ou a unidade padrão cadastrada para este item.</p>
+    <input type="hidden" id="edit-item-id">
+    <input type="hidden" id="edit-item-tipo">
+    <div class="field">
+      <label for="edit-item-nome">Nome do Material</label>
+      <input type="text" id="edit-item-nome" required>
+    </div>
+    <div class="field">
+      <label for="edit-item-unidade">Unidade Padrão</label>
+      <select id="edit-item-unidade" class="select-unidade-dynamic"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="edit-item-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="edit-item-salvar">Atualizar Cadastro</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-gerenciador">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h3>⚙️ Gerenciador de Cadastros</h3>
+      <button class="btn-close" id="btn-close-gerenciador">✕</button>
+    </div>
+    
+    <div class="subtabs">
+      <button class="subtab-btn active" data-subtab="subtab-lavanderia">🧺 Lavanderia</button>
+      <button class="subtab-btn" data-subtab="subtab-brindes">🎁 Brindes</button>
+      <button class="subtab-btn" data-subtab="subtab-unidades">📐 Unidades</button>
+    </div>
+
+    <div id="subtab-lavanderia" class="subtab-content active">
+      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Materiais cadastrados para a Lavanderia.</p>
+      <div class="table-wrap" style="max-height: 280px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr><th>Nome do Material</th><th>Unidade Padrão</th><th style="text-align:right">Ações</th></tr>
+          </thead>
+          <tbody id="tbl-gerenciar-lavanderia"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="subtab-brindes" class="subtab-content">
+      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Materiais cadastrados para Brindes.</p>
+      <div class="table-wrap" style="max-height: 280px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr><th>Nome do Material</th><th>Unidade Padrão</th><th style="text-align:right">Ações</th></tr>
+          </thead>
+          <tbody id="tbl-gerenciar-brindes"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="subtab-unidades" class="subtab-content">
+      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Adicione ou remova unidades de medida do sistema.</p>
+      <div class="form-grid" style="grid-template-columns: 2fr auto; gap: 8px; margin-bottom: 16px;">
+        <input type="text" id="new-unit-input" placeholder="Ex: Litro, Caixa, Rolo...">
+        <button class="btn btn-primary btn-sm" id="btn-add-unidade">+ Adicionar Unidade</button>
+      </div>
+      <div class="table-wrap" style="max-height: 200px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr><th>Unidade de Medida</th><th style="text-align:right">Ação</th></tr>
+          </thead>
+          <tbody id="tbl-gerenciar-unidades"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-retorno">
   <div class="modal">
     <h3>Registrar retorno</h3>

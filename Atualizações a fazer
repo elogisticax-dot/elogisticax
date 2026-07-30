@@ -1,1 +1,27 @@
-Nenhuma no momento
+1_Coluna "Diferença" mente pros itens ainda aguardando.
+  |_diffLabel começa como '0 (exato)' e só muda se isDone. Resultado: uma remessa que ainda nem voltou aparece com "0 (exato)" na tela, como se já tivesse sido conferida.
+
+2_Prazo de atraso virou fixo no código
+  |_(PRAZO_DIAS_ATRASO = 3 direto no JS), mas o cálculo de status ignora a vw_lavanderia_remessas_status que vem do banco (que inclusive pode estar configurada com prazo dinâmico via app_config).
+    Duas fontes de verdade calculando a mesma coisa de formas diferentes = risco de a tela e o banco divergirem, especialmente perto da meia-noite (o JS usa o horário do navegador do usuário, não o do servidor).
+
+3_Exportação (Excel/PDF) ignora os filtros.
+  |_Você pediu busca e filtro de status pra facilitar achar remessas específicas — mas os botões de exportar sempre pegam remessasCache (tudo), não filtradas (o que está na tela). Contra-intuitivo: a pessoa filtra "Atrasado",
+    clica em exportar, e o arquivo vem com tudo. Além disso, e util acrecentar uma indicação visual de que o filtro esta ativo e vai interferir na exportação do EXEL e PDF.
+
+4_Exclusão pode falhar sem avisar direito.
+  |_Ao excluir um item cadastrado (lavanderia/brinde) ou um brinde do inventário, o código apaga direto na tabela principal sem primeiro excluir os registros filhos (remessas, movimentações).
+    Se o banco tiver FOREIGN KEY sem CASCADE, o Supabase recusa o delete — e como não há tratamento de erro nesses cliques, o usuário não vai entender por que "não excluiu nada".
+
+5_Sem trava de duplo clique.
+  |_Nenhum botão de salvar/registrar se desabilita durante o await. Em uma rede mais lenta, dois cliques rápidos = duas remessas ou dois cadastros iguais.
+
+_Fluxo / UX
+  .Estoque de brindes sem trava de saldo negativo: o novo modelo de brindes_movimentacoes (registrar cada entrada/saída como evento) é uma baita melhoria de integridade — mas hoje nada impede uma "Saída" maior que o estoque atual, gerando quantidade negativa.
+  .Exclusão de item cadastrado com histórico: hoje é destrutivo e imediato. Melhor seria bloquear ("este material tem X remessas associadas, não pode ser excluído") ou permitir "arquivar" em vez de apagar — preserva o histórico de relatórios antigos.
+  .Contador de resultados: com busca/filtro agora existindo, mostrar "X remessas encontradas" ajuda a pessoa a confirmar que o filtro funcionou.
+
+_Design
+  .Trazer de volta um pequeno painel de "Prazo de atraso (dias)" editável — hoje ficou escondido dentro do código, sem nenhuma forma de ajustar pela interface.
+  .No breakpoint entre 640–820px, a grade de 6 colunas da timeline pode ficar apertada antes de virar 2 colunas — vale testar num tablet.
+  .Legenda rápida perto dos filtros de status explicando o que cada badge significa (ótimo pra quem é novo na equipe).

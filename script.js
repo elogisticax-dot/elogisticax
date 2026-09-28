@@ -1,12 +1,14 @@
 (function () {
   "use strict";
 
-  const SUPABASE_URL = 'https://irbdmpuhajxspbrvqzre.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_rKELxoeBY1oRFwy8kbnSlw_m2g9rXV9';
+  const SUPABASE_URL = "https://irbdmpuhajxspbrvqzre.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_rKELxoeBY1oRFwy8kbnSlw_m2g9rXV9";
+
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const PRAZO_DIAS_ATRASO = 3;
   const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const ITENS_FIXOS_LAVANDERIA = ['Camisola', 'MOP Branco', 'MOP Vermelho'];
   const todayISO = () => new Date().toISOString().slice(0, 10);
   const fmtDate = (iso) => { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
   const fmtDateLong = (iso) => { const [y, m, d] = iso.split('-'); return `${parseInt(d, 10)} de ${MESES[parseInt(m, 10) - 1]} de ${y}`; };
@@ -18,6 +20,33 @@
   let dashboardCache = {};
   let cacheItensLv = [];
   let cacheItensBd = [];
+  let estoqueCache = [];
+
+  // Modal de confirmação
+  let confirmCallback = null;
+  const modalConfirm = document.getElementById('modal-confirm');
+  const modalConfirmMsg = document.getElementById('modal-confirm-msg');
+  const modalConfirmTitle = document.getElementById('modal-confirm-title');
+  const modalConfirmSim = document.getElementById('modal-confirm-sim');
+  const modalConfirmCancelar = document.getElementById('modal-confirm-cancelar');
+
+  modalConfirmCancelar?.addEventListener('click', () => {
+    modalConfirm?.classList.remove('open');
+    confirmCallback = null;
+  });
+
+  modalConfirmSim?.addEventListener('click', () => {
+    modalConfirm?.classList.remove('open');
+    if (confirmCallback) confirmCallback();
+    confirmCallback = null;
+  });
+
+  function confirmCustom(msg, callback, title = 'Confirmar ação') {
+    if (modalConfirmMsg) modalConfirmMsg.textContent = msg;
+    if (modalConfirmTitle) modalConfirmTitle.textContent = title;
+    confirmCallback = callback;
+    modalConfirm?.classList.add('open');
+  }
 
   function toast(msg, type) {
     const stack = document.getElementById('toast-stack');
@@ -150,7 +179,7 @@
   document.getElementById('btn-open-modal-lv')?.addEventListener('click', () => {
     if (modalItemOrigem) modalItemOrigem.value = 'lavanderia';
     const title = document.getElementById('modal-item-title');
-    if (title) title.textContent = 'Cadastrar Item de Lavanderia';
+    if (title) title.textContent = 'Cadastrar item de lavanderia';
     const inputNome = document.getElementById('new-item-nome');
     if (inputNome) inputNome.value = '';
     modalNovoItem?.classList.add('open');
@@ -159,7 +188,7 @@
   document.getElementById('btn-open-modal-bd')?.addEventListener('click', () => {
     if (modalItemOrigem) modalItemOrigem.value = 'brindes';
     const title = document.getElementById('modal-item-title');
-    if (title) title.textContent = 'Cadastrar Item de Brinde / Material';
+    if (title) title.textContent = 'Cadastrar item de brinde / material';
     const inputNome = document.getElementById('new-item-nome');
     if (inputNome) inputNome.value = '';
     modalNovoItem?.classList.add('open');
@@ -182,7 +211,7 @@
       const lvUnidade = document.getElementById('lv-unidade');
       if (lvUnidade) lvUnidade.value = unidade;
     } else {
-      const { error } = await sb.from('brindes_itens').insert({ nome, unidade_padrao: unidade });
+      const { error } = await sb.from('brindes_itens').insert({ nome, unidade, unidade_padrao: unidade });
       if (error) { toast('Erro ao cadastrar item nos brindes', 'danger'); return; }
       await loadBrindes();
       if (bdItemSelect) bdItemSelect.value = nome;
@@ -205,7 +234,6 @@
 
   document.getElementById('btn-close-gerenciador')?.addEventListener('click', () => modalGerenciador?.classList.remove('open'));
 
-  // Alternar Subabas no Gerenciador
   document.querySelectorAll('.subtab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
@@ -228,7 +256,7 @@
     tbody.innerHTML = '';
 
     if (!listaItens || listaItens.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted)">Nenhum material cadastrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--muted)">Nenhum material cadastrado.</td></tr>';
       return;
     }
 
@@ -238,8 +266,20 @@
         <td class="cell-strong">${item.nome}</td>
         <td>${item.unidade_padrao || 'Unidade'}</td>
         <td style="text-align:right">
-          <button class="btn btn-ghost btn-sm btn-icon" data-edit-item-id="${item.id}" data-tabela="${tabela}" data-nome="${item.nome}" data-unidade="${item.unidade_padrao || 'Unidade'}">✏️</button>
-          <button class="btn btn-ghost btn-sm btn-icon" data-del-item-id="${item.id}" data-tabela="${tabela}">🗑️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" data-edit-item-id="${item.id}" data-tabela="${tabela}" data-nome="${item.nome}" data-unidade="${item.unidade_padrao || 'Unidade'}" title="Editar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" data-del-item-id="${item.id}" data-tabela="${tabela}" title="Excluir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -256,22 +296,36 @@
       tr.innerHTML = `
         <td class="cell-strong">${u}</td>
         <td style="text-align:right">
-          <button class="btn btn-ghost btn-sm btn-icon" data-del-unit="${u}">🗑️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" data-del-unit="${u}" title="Excluir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
         </td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  // Função auxiliar para delegar edição e exclusão de materiais
+  async function excluirComFilhos(tabela, id) {
+    if (tabela === 'lavanderia_itens') {
+      await sb.from('lavanderia_remessas').delete().eq('item_id', id);
+    } else if (tabela === 'brindes_itens') {
+      await sb.from('brindes_movimentacoes').delete().eq('item_id', id);
+    }
+    return sb.from(tabela).delete().eq('id', id);
+  }
+
   async function handleMaterialActions(e) {
     const btnEdit = e.target.closest('[data-edit-item-id]');
     const btnDel = e.target.closest('[data-del-item-id]');
 
     if (btnEdit) {
-      // Fecha o gerenciador e abre o modal de edição
       modalGerenciador?.classList.remove('open');
-      
+
       const editId = document.getElementById('edit-item-id');
       const editTipo = document.getElementById('edit-item-tipo');
       const editNome = document.getElementById('edit-item-nome');
@@ -281,31 +335,34 @@
       if (editTipo) editTipo.value = btnEdit.dataset.tabela;
       if (editNome) editNome.value = btnEdit.dataset.nome;
       if (editUnidade) editUnidade.value = btnEdit.dataset.unidade;
-      
+
       modalEditarItem?.classList.add('open');
     } else if (btnDel) {
-      if (confirm('Deseja realmente apagar este material cadastrado?')) {
-        const id = btnDel.dataset.delItemId;
-        const tabela = btnDel.dataset.tabela;
-        await sb.from(tabela).delete().eq('id', id);
-        toast('Material removido!', 'success');
-        await loadLavanderia();
-        await loadBrindes();
-        renderGerenciador();
-      }
+      confirmCustom(
+        'Deseja realmente apagar este material cadastrado? Isso também remove o histórico de saídas/movimentações associado a ele.',
+        async () => {
+          const id = btnDel.dataset.delItemId;
+          const tabela = btnDel.dataset.tabela;
+          const { error } = await excluirComFilhos(tabela, id);
+          if (error) { toast('Erro ao remover material', 'danger'); return; }
+          toast('Material removido!', 'success');
+          await loadLavanderia();
+          await loadBrindes();
+          renderGerenciador();
+        },
+        'Excluir material'
+      );
     }
   }
 
   document.getElementById('tbl-gerenciar-lavanderia')?.addEventListener('click', handleMaterialActions);
   document.getElementById('tbl-gerenciar-brindes')?.addEventListener('click', handleMaterialActions);
 
-  // Cancelar Edição -> Reabre o Gerenciador
   document.getElementById('edit-item-cancelar')?.addEventListener('click', () => {
     modalEditarItem?.classList.remove('open');
     modalGerenciador?.classList.add('open');
   });
 
-  // Salvar Edição do Material -> Reabre o Gerenciador com os dados atualizados
   document.getElementById('edit-item-salvar')?.addEventListener('click', async () => {
     const id = document.getElementById('edit-item-id')?.value;
     const tabela = document.getElementById('edit-item-tipo')?.value;
@@ -318,16 +375,15 @@
     if (error) { toast('Erro ao atualizar material', 'danger'); return; }
 
     modalEditarItem?.classList.remove('open');
-    toast('Cadastro de material corrigido!', 'success');
-    
+    toast('Cadastro de material atualizado!', 'success');
+
     await loadLavanderia();
     await loadBrindes();
     renderGerenciador();
-    
+
     modalGerenciador?.classList.add('open');
   });
 
-  // Adicionar e Remover Unidade de Medida
   document.getElementById('btn-add-unidade')?.addEventListener('click', async () => {
     const input = document.getElementById('new-unit-input');
     const nome = input?.value.trim();
@@ -347,12 +403,16 @@
     const btnDel = e.target.closest('[data-del-unit]');
     if (btnDel) {
       const unitNome = btnDel.dataset.delUnit;
-      if (confirm(`Remover a unidade "${unitNome}"?`)) {
-        await sb.from('unidades_medida').delete().eq('nome', unitNome);
-        toast('Unidade removida', 'success');
-        await loadUnidades();
-        renderGerenciadorUnidades();
-      }
+      confirmCustom(
+        `Remover a unidade "${unitNome}"?`,
+        async () => {
+          await sb.from('unidades_medida').delete().eq('nome', unitNome);
+          toast('Unidade removida', 'success');
+          await loadUnidades();
+          renderGerenciadorUnidades();
+        },
+        'Excluir unidade'
+      );
     }
   });
 
@@ -411,28 +471,55 @@
       groupMap.get(it.data_saida).itens.push(it);
     });
 
+    const semFiltroAtivo = !searchVal && !searchDateVal && statusVal === 'todos';
+
+    groups.forEach(group => {
+      if (semFiltroAtivo) {
+        ITENS_FIXOS_LAVANDERIA.forEach(nomeFixo => {
+          const jaTem = group.itens.some(it => it.item === nomeFixo);
+          if (!jaTem) {
+            group.itens.push({ id: `placeholder-${group.data}-${nomeFixo}`, item: nomeFixo, placeholder: true });
+          }
+        });
+      }
+      group.itens.sort((a, b) => a.item.localeCompare(b.item, 'pt-BR'));
+    });
+
     groups.forEach(group => {
       const groupEl = document.createElement('div');
       groupEl.className = 'timeline-group';
 
       const itemsHtml = group.itens.map(it => {
+        if (it.placeholder) {
+          return `
+            <div class="tl-item tl-item-placeholder">
+              <div class="tl-col-item">${it.item}</div>
+              <div class="tl-col-enviado cell-muted">—</div>
+              <div class="tl-col-retornada cell-muted">—</div>
+              <div class="tl-col-status"><span class="badge badge-muted">Sem lançamento</span></div>
+              <div class="tl-col-diff cell-muted">—</div>
+              <div class="tl-col-actions"></div>
+            </div>`;
+        }
+
         const diff = Number(it.diferenca);
         const stCalculado = calcularStatus(it);
         const isDone = stCalculado === 'entregue';
         const isLate = stCalculado === 'atrasado';
 
-        let badge = `<span class="badge badge-wait">⏳ Aguardando</span>`;
-        if (isDone) badge = `<span class="badge badge-done">✔ Entregue</span>`;
-        else if (isLate) badge = `<span class="badge badge-late">⚠️ Atrasado</span>`;
+        let badge = `<span class="badge badge-wait">Aguardando</span>`;
+        if (isDone) badge = `<span class="badge badge-done">Entregue</span>`;
+        else if (isLate) badge = `<span class="badge badge-late">Atrasado</span>`;
 
-        let diffLabel = '0 (exato)';
-        let diffColor = 'var(--text-muted)';
+        let diffLabel = '—';
+        let diffColor = 'var(--muted)';
         if (isDone) {
           if (diff > 0) { diffLabel = `+${diff} (sobrou)`; diffColor = 'var(--success)'; }
           else if (diff < 0) { diffLabel = `${diff} (faltou)`; diffColor = 'var(--danger)'; }
+          else { diffLabel = '0 (exato)'; }
         }
 
-        const retCol = isDone ? `${it.qtd_retornada} ${it.unidade} em ${fmtDate(it.data_retorno)}` : `0 ${it.unidade}`;
+        const retCol = isDone ? `${it.qtd_retornada} ${it.unidade} em ${fmtDate(it.data_retorno)}` : `— ${it.unidade}`;
 
         return `
           <div class="tl-item">
@@ -443,7 +530,14 @@
             <div class="tl-col-diff" style="color:${diffColor}">${diffLabel}</div>
             <div class="tl-col-actions">
               ${!isDone ? `<button class="btn btn-ghost btn-sm" data-action="retorno" data-id="${it.id}" data-item="${it.item}" data-restante="${it.qtd_saida}">Baixa</button>` : ''}
-              <button class="btn btn-ghost btn-sm btn-icon" data-action="del-lv" data-id="${it.id}">🗑️</button>
+              <button class="btn btn-ghost btn-sm btn-icon" data-action="del-lv" data-id="${it.id}" title="Excluir">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
             </div>
           </div>`;
       }).join('');
@@ -460,61 +554,114 @@
       container.appendChild(groupEl);
     });
 
-    const totalEnviado = Number(dashboardCache.total_enviado || 0);
-    const totalRetornado = Number(dashboardCache.total_retornado || 0);
-    const aguardando = Number(dashboardCache.aguardando_retorno || 0);
-    const diferencaTotal = Number(dashboardCache.diferenca_total || 0);
+    // Contagens do dashboard
+    let emAberto = 0, atrasadas = 0, entreguesMes = 0;
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-    const totalEnvEl = document.getElementById('lv-total-enviado');
-    const aguardEl = document.getElementById('lv-aguardando');
-    if (totalEnvEl) totalEnvEl.innerHTML = `${totalEnviado} <span>peças</span>`;
-    if (aguardEl) aguardEl.innerHTML = `${aguardando} <span>peças</span>`;
+    remessasCache.forEach(it => {
+      const st = calcularStatus(it);
+      if (st === 'aguardando' || st === 'atrasado') emAberto++;
+      if (st === 'atrasado') atrasadas++;
+      if (st === 'entregue' && it.data_retorno) {
+        const dataRet = new Date(it.data_retorno);
+        if (dataRet >= inicioMes) entreguesMes++;
+      }
+    });
 
-    const diffEl = document.getElementById('lv-diferenca');
-    if (diffEl) {
-      const sinal = diferencaTotal > 0 ? '+' : '';
-      diffEl.innerHTML = `${sinal}${diferencaTotal} <span>peças</span>`;
-      diffEl.style.color = diferencaTotal < 0 ? 'var(--danger)' : (diferencaTotal > 0 ? 'var(--success)' : '');
+    const emAbertoEl = document.getElementById('lv-em-aberto');
+    const atrasadasEl = document.getElementById('lv-atrasadas');
+    const entreguesMesEl = document.getElementById('lv-entregues-mes');
+    if (emAbertoEl) emAbertoEl.textContent = emAberto;
+    if (atrasadasEl) atrasadasEl.textContent = atrasadas;
+    if (entreguesMesEl) entreguesMesEl.textContent = entreguesMes;
+
+    const alertBox = document.getElementById('lv-alert-atrasadas');
+    const alertText = document.getElementById('lv-alert-text');
+    if (alertBox && alertText) {
+      if (atrasadas > 0) {
+        alertText.textContent = `${atrasadas} remessa${atrasadas > 1 ? 's' : ''} atrasada${atrasadas > 1 ? 's' : ''} — vale confirmar com a lavanderia.`;
+        alertBox.style.display = 'block';
+      } else {
+        alertBox.style.display = 'none';
+      }
     }
-
-    const pct = totalEnviado > 0 ? Math.round((totalRetornado / totalEnviado) * 100) : 0;
-    const circumference = 169.6;
-    const ringProg = document.getElementById('lv-ring-progress');
-    const ringLbl = document.getElementById('lv-ring-label');
-    if (ringProg) ringProg.style.strokeDashoffset = circumference - (circumference * pct / 100);
-    if (ringLbl) ringLbl.textContent = pct + '%';
   }
 
   document.getElementById('lv-search')?.addEventListener('input', renderLavanderia);
   document.getElementById('lv-search-date')?.addEventListener('change', renderLavanderia);
   document.getElementById('lv-filter-status')?.addEventListener('change', renderLavanderia);
 
+  document.getElementById('btn-clear-date')?.addEventListener('click', () => {
+    const dateInput = document.getElementById('lv-search-date');
+    if (dateInput) dateInput.value = '';
+    renderLavanderia();
+  });
+
   document.getElementById('form-saida')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
     const item = lvItemSelect?.value;
     const qtd = parseFloat(document.getElementById('lv-qtd')?.value);
     const unidade = document.getElementById('lv-unidade')?.value;
     const data_saida = document.getElementById('lv-data')?.value;
 
-    if (!item || !qtd) { toast('Preencha os campos obrigatórios', 'danger'); return; }
+    if (!item || isNaN(qtd) || qtd < 0) { toast('Preencha os campos obrigatórios', 'danger'); return; }
 
-    let { data: itemRow } = await sb.from('lavanderia_itens').select('id').eq('nome', item).maybeSingle();
-    let itemId = itemRow ? itemRow.id : null;
+    if (qtd === 0) {
+      confirmCustom(
+        `Você está registrando uma saída de 0 ${unidade} para "${item}".\n\nIsso é usado quando um material retorna da lavanderia sem ter sido enviado antes. Deseja continuar?`,
+        async () => {
+          if (submitBtn) submitBtn.disabled = true;
+          try {
+            let { data: itemRow } = await sb.from('lavanderia_itens').select('id').eq('nome', item).maybeSingle();
+            let itemId = itemRow ? itemRow.id : null;
 
-    if (!itemId) {
-      const { data: novo, error: eIns } = await sb.from('lavanderia_itens').insert({ nome: item, unidade_padrao: unidade }).select('id').single();
-      if (eIns) { toast('Erro ao criar item', 'danger'); return; }
-      itemId = novo.id;
+            if (!itemId) {
+              const { data: novo, error: eIns } = await sb.from('lavanderia_itens').insert({ nome: item, unidade_padrao: unidade }).select('id').single();
+              if (eIns) { toast('Erro ao criar item', 'danger'); return; }
+              itemId = novo.id;
+            }
+
+            const { error } = await sb.from('lavanderia_remessas').insert({ item_id: itemId, qtd_saida: qtd, unidade, data_saida });
+            if (error) { toast('Erro ao registrar saída', 'danger'); return; }
+
+            e.target.reset();
+            const lvData = document.getElementById('lv-data');
+            if (lvData) lvData.value = todayISO();
+            await loadLavanderia();
+            toast('Saída registrada com sucesso', 'success');
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        },
+        'Confirmar saída'
+      );
+      return;
     }
 
-    const { error } = await sb.from('lavanderia_remessas').insert({ item_id: itemId, qtd_saida: qtd, unidade, data_saida });
-    if (error) { toast('Erro ao registrar saída', 'danger'); return; }
+    if (submitBtn) submitBtn.disabled = true;
+    try {
+      let { data: itemRow } = await sb.from('lavanderia_itens').select('id').eq('nome', item).maybeSingle();
+      let itemId = itemRow ? itemRow.id : null;
 
-    e.target.reset();
-    const lvData = document.getElementById('lv-data');
-    if (lvData) lvData.value = todayISO();
-    await loadLavanderia();
-    toast('Saída registrada com sucesso', 'success');
+      if (!itemId) {
+        const { data: novo, error: eIns } = await sb.from('lavanderia_itens').insert({ nome: item, unidade_padrao: unidade }).select('id').single();
+        if (eIns) { toast('Erro ao criar item', 'danger'); return; }
+        itemId = novo.id;
+      }
+
+      const { error } = await sb.from('lavanderia_remessas').insert({ item_id: itemId, qtd_saida: qtd, unidade, data_saida });
+      if (error) { toast('Erro ao registrar saída', 'danger'); return; }
+
+      e.target.reset();
+      const lvData = document.getElementById('lv-data');
+      if (lvData) lvData.value = todayISO();
+      await loadLavanderia();
+      toast('Saída registrada com sucesso', 'success');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
   });
 
   let retornoTarget = null;
@@ -533,151 +680,331 @@
       if (retData) retData.value = todayISO();
       modalRetorno?.classList.add('open');
     } else if (btn.dataset.action === 'del-lv') {
-      if (confirm('Deseja excluir esta remessa?')) {
-        await sb.from('lavanderia_remessas').delete().eq('id', id);
-        toast('Remessa excluída', 'success');
-        await loadLavanderia();
-      }
+      confirmCustom(
+        'Deseja excluir esta remessa?',
+        async () => {
+          await sb.from('lavanderia_remessas').delete().eq('id', id);
+          toast('Remessa excluída', 'success');
+          await loadLavanderia();
+        },
+        'Excluir remessa'
+      );
     }
   });
 
   document.getElementById('ret-cancelar')?.addEventListener('click', () => modalRetorno?.classList.remove('open'));
   document.getElementById('ret-confirmar')?.addEventListener('click', async () => {
+    const btnConfirmar = document.getElementById('ret-confirmar');
     const qtd = parseFloat(document.getElementById('ret-qtd')?.value);
     const data_retorno = document.getElementById('ret-data')?.value;
 
     if (isNaN(qtd) || !data_retorno) { toast('Informe quantidade e data válidas', 'danger'); return; }
 
-    const { error } = await sb.from('lavanderia_remessas').update({ qtd_retornada: qtd, data_retorno, status: 'entregue' }).eq('id', retornoTarget);
-    if (error) { toast('Erro ao registrar retorno', 'danger'); return; }
+    if (btnConfirmar) btnConfirmar.disabled = true;
+    try {
+      const { error } = await sb.from('lavanderia_remessas').update({ qtd_retornada: qtd, data_retorno, status: 'entregue' }).eq('id', retornoTarget);
+      if (error) { toast('Erro ao registrar retorno', 'danger'); return; }
 
-    modalRetorno?.classList.remove('open');
-    await loadLavanderia();
-    toast('Retorno registrado!', 'success');
+      modalRetorno?.classList.remove('open');
+      await loadLavanderia();
+      toast('Retorno registrado!', 'success');
+    } finally {
+      if (btnConfirmar) btnConfirmar.disabled = false;
+    }
   });
 
   /* ================= EXPORTAÇÃO ================= */
   document.getElementById('btn-export-excel')?.addEventListener('click', () => {
-    const dados = remessasCache.map(r => ({
-      'Data Saída': fmtDate(r.data_saida),
-      'Item': r.item,
-      'Qtd Saída': r.qtd_saida,
-      'Unidade': r.unidade,
-      'Data Retorno': fmtDate(r.data_retorno),
-      'Qtd Retornada': r.qtd_retornada || 0,
-      'Diferença': r.diferenca || 0,
-      'Status': calcularStatus(r).toUpperCase()
-    }));
-    const ws = XLSX.utils.json_to_sheet(dados);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Conciliação");
-    XLSX.writeFile(wb, `eLogistica_Conciliacao_${todayISO()}.xlsx`);
+    if (typeof XLSX === 'undefined') { toast('Biblioteca de Excel não carregou — verifique sua conexão', 'danger'); return; }
+    try {
+      const dados = remessasCache.map(r => ({
+        'Data Saída': fmtDate(r.data_saida),
+        'Item': r.item,
+        'Qtd Saída': r.qtd_saida,
+        'Unidade': r.unidade,
+        'Data Retorno': fmtDate(r.data_retorno),
+        'Qtd Retornada': r.qtd_retornada || 0,
+        'Diferença': r.diferenca || 0,
+        'Status': calcularStatus(r).toUpperCase()
+      }));
+      const ws = XLSX.utils.json_to_sheet(dados);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Conciliação");
+      XLSX.writeFile(wb, `eLogistica_Conciliacao_${todayISO()}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao gerar o Excel', 'danger');
+    }
   });
 
   document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text("Relatório de Conciliação de Lavanderia", 14, 15);
+    if (!window.jspdf) { toast('Biblioteca de PDF não carregou — verifique sua conexão', 'danger'); return; }
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Relatório de Conciliação de Lavanderia", 14, 15);
 
-    const tableRows = remessasCache.map(r => [
-      fmtDate(r.data_saida),
-      r.item,
-      `${r.qtd_saida} ${r.unidade}`,
-      r.qtd_retornada ? `${r.qtd_retornada} ${r.unidade}` : '—',
-      fmtDate(r.data_retorno),
-      r.diferenca || 0,
-      calcularStatus(r).toUpperCase()
-    ]);
+      const tableRows = remessasCache.map(r => [
+        fmtDate(r.data_saida),
+        r.item,
+        `${r.qtd_saida} ${r.unidade}`,
+        r.qtd_retornada ? `${r.qtd_retornada} ${r.unidade}` : '0',
+        fmtDate(r.data_retorno),
+        r.diferenca || 0,
+        calcularStatus(r).toUpperCase()
+      ]);
 
-    doc.autoTable({
-      head: [['Data Saída', 'Item', 'Qtd Enviada', 'Qtd Devolvida', 'Data Retorno', 'Dif.', 'Status']],
-      body: tableRows,
-      startY: 20
-    });
-    doc.save(`eLogistica_Conciliacao_${todayISO()}.pdf`);
+      doc.autoTable({
+        head: [['Data Saída', 'Item', 'Qtd Enviada', 'Qtd Devolvida', 'Data Retorno', 'Dif.', 'Status']],
+        body: tableRows,
+        startY: 20
+      });
+      doc.save(`eLogistica_Conciliacao_${todayISO()}.pdf`);
+    } catch (err) {
+      console.error(err);
+      toast('Erro ao gerar o PDF', 'danger');
+    }
   });
 
   /* ================= BRINDES ================= */
+  /* ================= BRINDES ================= */
   async function loadBrindes() {
-    const { data: itens } = await sb.from('brindes_itens').select('*').order('nome');
-    const { data: estoque } = await sb.from('vw_brindes_estoque').select('*');
+    const { data: itens, error: errItens } = await sb.from('brindes_itens').select('*').order('nome');
+    const { data: estoque, error: errEstoque } = await sb.from('vw_brindes_estoque').select('*');
+
+    if (errItens || errEstoque) {
+      console.error('Erro ao carregar brindes:', errItens || errEstoque);
+      toast('Erro ao buscar estoque de brindes', 'danger');
+    }
 
     cacheItensBd = itens || [];
     mapaBdUnidades = {};
+    // Ordenar itens por nome
+    cacheItensBd.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     cacheItensBd.forEach(i => { mapaBdUnidades[i.nome] = i.unidade_padrao || 'Unidade'; });
 
-    fillSelect(bdItemSelect, cacheItensBd.map(i => i.nome), 'Selecione um brinde...');
-    renderBrindes(estoque || []);
+    estoqueCache = estoque || [];
+    // Ordenar estoque por nome
+    estoqueCache.sort((a, b) => (a.item || '').localeCompare(b.item || '', 'pt-BR'));
+
+    fillSelect(bdItemSelect, cacheItensBd.map(i => i.nome), 'Selecione um item...');
+    renderBrindes(estoqueCache);
+    renderAlertaEstoque(estoqueCache);
+  }
+
+  // Filtros da tabela de brindes
+  document.getElementById('bd-search')?.addEventListener('input', () => renderBrindes(estoqueCache));
+  document.getElementById('bd-filter-status')?.addEventListener('change', () => renderBrindes(estoqueCache));
+
+  function renderAlertaEstoque(estoque) {
+    const alertaBox = document.getElementById('bd-alerta-estoque');
+    const alertaMsg = document.getElementById('bd-alerta-msg');
+    const alertaLista = document.getElementById('bd-alerta-lista');
+    
+    if (!alertaBox || !alertaMsg || !alertaLista) return;
+
+    const itensBaixo = estoque.filter(r => {
+      const qtd = Number(r.qtd_total || 0);
+      return qtd > 0 && qtd < 5;
+    });
+
+    const itensZerados = estoque.filter(r => {
+      const qtd = Number(r.qtd_total || 0);
+      return qtd === 0;
+    });
+
+    const totalCritico = itensBaixo.length + itensZerados.length;
+
+    if (totalCritico === 0) {
+      alertaBox.style.display = 'none';
+      return;
+    }
+
+    alertaBox.style.display = 'block';
+    
+    let msg = `${totalCritico} item${totalCritico > 1 ? 's' : ''} com estoque crítico.`;
+    if (itensZerados.length > 0) {
+      msg += ` ${itensZerados.length} zerado${itensZerados.length > 1 ? 's' : ''}.`;
+    }
+    if (itensBaixo.length > 0) {
+      msg += ` ${itensBaixo.length} com estoque baixo.`;
+    }
+    
+    alertaMsg.textContent = msg;
+
+    // Lista de itens críticos
+    alertaLista.innerHTML = '';
+    
+    itensZerados.forEach(item => {
+      const badge = document.createElement('span');
+      badge.className = 'bd-alert-item zerado';
+      badge.textContent = item.item || '—';
+      alertaLista.appendChild(badge);
+    });
+
+    itensBaixo.forEach(item => {
+      const badge = document.createElement('span');
+      badge.className = 'bd-alert-item';
+      badge.textContent = `${item.item} (${Number(item.qtd_total || 0)} ${item.unidade})`;
+      alertaLista.appendChild(badge);
+    });
   }
 
   function renderBrindes(estoque) {
     const tbody = document.getElementById('bd-tbody');
     const emptyEl = document.getElementById('bd-empty');
+    const searchVal = document.getElementById('bd-search')?.value.toLowerCase().trim() || '';
+    const statusFilter = document.getElementById('bd-filter-status')?.value || 'todos';
+    
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (emptyEl) emptyEl.style.display = estoque.length === 0 ? 'block' : 'none';
+    // Filtrar
+    let filtrado = estoque.filter(row => {
+      const matchSearch = (row.item || '').toLowerCase().includes(searchVal);
+      const qtd = Number(row.qtd_total || 0);
+      let matchStatus = true;
+      
+      if (statusFilter === 'ok') matchStatus = qtd >= 5;
+      else if (statusFilter === 'baixo') matchStatus = qtd > 0 && qtd < 5;
+      else if (statusFilter === 'zerado') matchStatus = qtd === 0;
+      
+      return matchSearch && matchStatus;
+    });
 
-    let totalItens = estoque.length;
+    // Ordenar por nome
+    filtrado.sort((a, b) => (a.item || '').localeCompare(b.item || '', 'pt-BR'));
+
+    if (emptyEl) emptyEl.style.display = filtrado.length === 0 ? 'block' : 'none';
+
+    let totalItens = filtrado.length;
     let totalPecas = 0;
+    let countBaixo = 0;
+    let countZerado = 0;
 
-    estoque.forEach(row => {
+    filtrado.forEach(row => {
       const qtd = Number(row.qtd_total || 0);
       totalPecas += qtd;
-      const isLow = qtd < 5;
+      const isLow = qtd > 0 && qtd < 5;
+      const isZero = qtd === 0;
+      
+      if (isLow) countBaixo++;
+      if (isZero) countZerado++;
+
+      let statusBadge = '<span class="badge badge-ok">OK</span>';
+      let rowClass = 'estoque-ok';
+      
+      if (isZero) {
+        statusBadge = '<span class="badge badge-late">Zerado</span>';
+        rowClass = 'estoque-zerado';
+      } else if (isLow) {
+        statusBadge = '<span class="badge badge-low">Estoque baixo</span>';
+        rowClass = 'estoque-baixo';
+      }
 
       const tr = document.createElement('tr');
+      tr.className = rowClass;
       tr.innerHTML = `
-        <td data-label="Material" class="cell-strong">${row.item}</td>
-        <td data-label="Quantidade">${qtd}</td>
+        <td data-label="Material" class="cell-strong">${row.item || '—'}</td>
+        <td data-label="Quantidade" style="font-family:ui-monospace; font-weight:600">${qtd}</td>
         <td data-label="Unidade" class="cell-muted">${row.unidade || 'Unidade'}</td>
-        <td data-label="Status">${isLow ? '<span class="badge badge-low">⚠️ Estoque Baixo</span>' : '<span class="badge badge-ok">✔ OK</span>'}</td>
-        <td data-label="Ações"><button class="btn btn-ghost btn-sm btn-icon" data-del-bd="${row.item_id}">🗑️</button></td>
+        <td data-label="Status">${statusBadge}</td>
+        <td data-label="Ações">
+          <button class="btn btn-ghost btn-sm btn-icon" data-del-bd="${row.item_id}" title="Excluir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
 
+    // Atualizar contadores
     const totalItensEl = document.getElementById('bd-total-itens');
     const totalEstoqueEl = document.getElementById('bd-total-estoque');
+    const estoqueBaixoEl = document.getElementById('bd-estoque-baixo');
+    const zeradosEl = document.getElementById('bd-zerados');
+    
     if (totalItensEl) totalItensEl.textContent = totalItens;
     if (totalEstoqueEl) totalEstoqueEl.textContent = totalPecas;
+    if (estoqueBaixoEl) estoqueBaixoEl.textContent = countBaixo;
+    if (zeradosEl) zeradosEl.textContent = countZerado;
   }
 
   document.getElementById('bd-tbody')?.addEventListener('click', async (e) => {
     const btnDel = e.target.closest('[data-del-bd]');
     if (btnDel) {
-      if (confirm('Deseja realmente apagar este item de brinde?')) {
-        const id = btnDel.dataset.delBd;
-        await sb.from('brindes_itens').delete().eq('id', id);
-        toast('Item removido!', 'success');
-        await loadBrindes();
-      }
+      confirmCustom(
+        'Deseja realmente apagar este item de brinde? Isso também remove o histórico de movimentações dele.',
+        async () => {
+          const id = btnDel.dataset.delBd;
+          const { error } = await excluirComFilhos('brindes_itens', id);
+          if (error) { toast('Erro ao remover item', 'danger'); return; }
+          toast('Item removido!', 'success');
+          await loadBrindes();
+        },
+        'Excluir item'
+      );
     }
   });
 
   document.getElementById('form-brinde')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
     const item = bdItemSelect?.value;
-    const tipo = document.getElementById('bd-tipo')?.value;
+    const tipo = document.getElementById('bd-tipo')?.value || 'entrada';
     const qtd = parseFloat(document.getElementById('bd-qtd')?.value);
-    const unidade = document.getElementById('bd-unidade')?.value;
 
-    if (!item || !qtd) return;
+    if (!item || isNaN(qtd) || qtd <= 0) {
+      toast('Informe um item e uma quantidade válida', 'danger');
+      return;
+    }
 
-    let { data: itemRow } = await sb.from('brindes_itens').select('id').eq('nome', item).single();
-    if (!itemRow) { toast('Brinde não encontrado', 'danger'); return; }
-    
-    const factor = tipo === 'saida' ? -1 : 1;
+    if (tipo === 'saida') {
+      const linhaEstoque = estoqueCache.find(r => r.item === item);
+      const saldoAtual = linhaEstoque ? Number(linhaEstoque.qtd_total || 0) : 0;
+      if (qtd > saldoAtual) {
+        toast(`Estoque insuficiente: só há ${saldoAtual} disponível`, 'danger');
+        return;
+      }
+    }
 
-    await sb.from('brindes_movimentacoes').insert({
-      item_id: itemRow.id,
-      qtd: qtd * factor,
-      unidade
-    });
+    if (submitBtn) submitBtn.disabled = true;
+    try {
+      let { data: itemRow, error: errItem } = await sb
+        .from('brindes_itens')
+        .select('id')
+        .eq('nome', item)
+        .maybeSingle();
 
-    e.target.reset();
-    await loadBrindes();
-    toast('Estoque atualizado!', 'success');
+      if (errItem || !itemRow) {
+        toast('Item não encontrado nos cadastros', 'danger');
+        return;
+      }
+
+      const { error: errMov } = await sb.from('brindes_movimentacoes').insert({
+        item_id: itemRow.id,
+        tipo: tipo,
+        quantidade: qtd,
+        data_mov: todayISO()
+      });
+
+      if (errMov) {
+        console.error('Erro Supabase:', errMov);
+        toast(`Erro ao salvar: ${errMov.message}`, 'danger');
+        return;
+      }
+
+      e.target.reset();
+      await loadBrindes();
+      toast('Estoque atualizado com sucesso!', 'success');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
   });
 
   checkSession();

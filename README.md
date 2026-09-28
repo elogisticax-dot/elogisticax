@@ -14,6 +14,9 @@ Aplicação web para controle interno de remessas enviadas à lavanderia e do es
 - Indicadores de remessas em aberto, atrasadas e entregues no mês.
 - Exportação da conciliação em Excel e PDF.
 
+- <img width="1227" height="915" alt="image" src="https://github.com/user-attachments/assets/677574ac-d3db-466d-a844-15063b886d14" />
+
+
 ### Brindes e materiais
 - Cadastro de itens e unidades de medida.
 - Registro de entradas e saídas do estoque.
@@ -21,6 +24,9 @@ Aplicação web para controle interno de remessas enviadas à lavanderia e do es
 - Inventário com busca e filtros por situação: OK, estoque baixo ou zerado.
 - Indicadores de itens cadastrados, quantidade em estoque, estoque baixo e itens zerados.
 - Alertas para itens com menos de cinco unidades ou sem estoque.
+
+- <img width="1214" height="910" alt="image" src="https://github.com/user-attachments/assets/07bb4010-83a0-41af-844a-c9f9a17ebd56" />
+
 
 ### Cadastros e acesso
 - Login e logout usando autenticação do Supabase.

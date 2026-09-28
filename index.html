@@ -6,7 +6,7 @@
   <title>eLogística · Controle de Lavanderia e Brindes</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,10 +15,17 @@
 </head>
 <body>
 
+<!-- Login Gate -->
 <div class="modal-backdrop open" id="login-gate">
   <div class="modal">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-      <div class="brand-mark" style="width:32px;height:32px;font-size:1rem">📦</div>
+      <div class="brand-mark" style="width:32px;height:32px;font-size:1rem">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+      </div>
       <h3 style="margin:0">eLogística</h3>
     </div>
     <p>Sistema interno de controle de estoque.</p>
@@ -37,80 +44,90 @@
   </div>
 </div>
 
+<!-- Topbar -->
 <div class="topbar">
   <div class="brand">
-    <div class="brand-mark">📦</div>
+    <div class="brand-mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+      </svg>
+    </div>
     <div>
       eLogística
       <small>Controle interno de fluxos</small>
     </div>
   </div>
   <div class="topbar-right">
-    <button class="btn btn-ghost btn-sm" id="btn-open-gerenciador">⚙️ Gerenciar Cadastros</button>
+    <button class="btn btn-ghost btn-sm" id="btn-open-gerenciador">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+      Gerenciar cadastros
+    </button>
     <button class="btn btn-ghost btn-sm" id="logout-btn" style="display:none">Sair</button>
     <div class="tabs" role="tablist" aria-label="Módulos">
-      <button class="tab-btn" role="tab" aria-selected="true" data-tab="lavanderia"><span class="dot">🧺</span> Lavanderia</button>
-      <button class="tab-btn" role="tab" aria-selected="false" data-tab="brindes"><span class="dot">🎁</span> Brindes</button>
+      <button class="tab-btn" role="tab" aria-selected="true" data-tab="lavanderia">Lavanderia</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="brindes">Brindes</button>
     </div>
   </div>
 </div>
 
+<!-- Main -->
 <main>
-
+  <!-- Lavanderia -->
   <section id="panel-lavanderia" class="panel active">
     <div class="module-head-row">
       <div class="module-head">
-        <h1 class="module-title">Controle de Lavanderia</h1>
+        <h1 class="module-title">Controle de lavanderia</h1>
         <p class="module-sub">Registre saídas, confirme retornos e acompanhe a conciliação.</p>
       </div>
       <div class="export-actions">
-        <button class="btn btn-ghost btn-sm" id="btn-export-excel">📊 Exportar Excel</button>
-        <button class="btn btn-ghost btn-sm" id="btn-export-pdf">📄 Exportar PDF</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-excel">Exportar Excel</button>
+        <button class="btn btn-ghost btn-sm" id="btn-export-pdf">Exportar PDF</button>
       </div>
     </div>
 
     <div class="stats">
       <div class="stat-card">
-        <div class="stat-label">Total enviado</div>
-        <div class="stat-value" id="lv-total-enviado">0 <span>peças</span></div>
+        <div class="stat-label">Remessas em aberto</div>
+        <div class="stat-value" id="lv-em-aberto">0</div>
       </div>
       <div class="stat-card warn">
-        <div class="stat-label">Aguardando retorno</div>
-        <div class="stat-value" id="lv-aguardando">0 <span>peças</span></div>
+        <div class="stat-label">Atrasadas</div>
+        <div class="stat-value" id="lv-atrasadas">0</div>
       </div>
-      <div class="stat-card diff">
-        <div class="stat-label">Diferença total</div>
-        <div class="stat-value" id="lv-diferenca">0 <span>peças</span></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="ring-row">
-        <svg class="ring" width="64" height="64" viewBox="0 0 64 64">
-          <circle cx="32" cy="32" r="27" fill="none" stroke="#E1E7EA" stroke-width="7"/>
-          <circle id="lv-ring-progress" cx="32" cy="32" r="27" fill="none" stroke="#0E8F82" stroke-width="7"
-                  stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"
-                  transform="rotate(-90 32 32)" style="transition:stroke-dashoffset .5s ease"/>
-          <text id="lv-ring-label" x="32" y="37" text-anchor="middle" font-size="14" font-weight="700" fill="#0E2A28" font-family="Space Grotesk, sans-serif">0%</text>
-        </svg>
-        <div class="ring-copy"><b>Conciliação de datas:</b> percentual de peças já retornadas em relação ao total enviado.</div>
+      <div class="stat-card ok">
+        <div class="stat-label">Entregues este mês</div>
+        <div class="stat-value" id="lv-entregues-mes">0</div>
       </div>
     </div>
 
+    <div class="card" id="lv-alert-atrasadas" style="display:none; border-left:4px solid var(--danger)">
+      <p style="margin:0; font-weight:600; color:var(--danger)" id="lv-alert-text"></p>
+    </div>
+
     <div class="card">
-      <h2 class="card-title">🧺 Registrar nova saída</h2>
+      <h2 class="card-title">Registrar nova saída</h2>
       <p class="card-sub">Preencha os dados da remessa que está saindo para lavagem.</p>
       <form id="form-saida" class="form-grid">
         <div class="field">
           <label for="lv-item">Item ou roupa</label>
           <div class="row-inline">
             <select id="lv-item" required></select>
-            <button type="button" class="btn-add-opt" id="btn-open-modal-lv" title="Cadastrar novo item com unidade">+</button>
+            <button type="button" class="btn-add-opt" id="btn-open-modal-lv" title="Cadastrar novo item com unidade">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
           </div>
         </div>
         <div class="field">
-          <label for="lv-qtd">Qtd. de saída</label>
-          <input type="number" id="lv-qtd" min="0.01" step="0.01" placeholder="0" required>
+          <label for="lv-qtd">Quantidade de saída</label>
+          <input type="number" id="lv-qtd" min="0" step="0.01" placeholder="0" required>
         </div>
         <div class="field">
           <label for="lv-unidade">Unidade</label>
@@ -121,7 +138,13 @@
           <input type="date" id="lv-data" required>
         </div>
         <div class="field">
-          <button type="submit" class="btn btn-primary">↗ Registrar saída</button>
+          <button type="submit" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <polyline points="19 12 12 19 5 12"></polyline>
+            </svg>
+            Registrar saída
+          </button>
         </div>
       </form>
     </div>
@@ -129,41 +152,67 @@
     <div class="card">
       <div class="card-head-filter">
         <div>
-          <h2 class="card-title">📋 Remessas em andamento</h2>
+          <h2 class="card-title">Remessas em andamento</h2>
           <p class="card-sub">Confirme o retorno assim que a lavanderia devolver as peças.</p>
         </div>
         <div class="filters-row">
-          <input type="text" id="lv-search" placeholder="🔍 Buscar por item..." class="input-search">
+          <input type="text" id="lv-search" placeholder="Buscar por item..." class="input-search">
           <div class="date-filter-wrapper">
             <input type="date" id="lv-search-date" class="input-search" title="Filtrar por data de saída">
-            <button type="button" id="btn-clear-date" class="btn-clear-date" title="Limpar filtro de data" style="display:none">✕</button>
+            <button type="button" id="btn-clear-date" class="btn-clear-date" title="Limpar filtro de data" style="display:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
           <select id="lv-filter-status" class="select-filter">
             <option value="todos">Todos os status</option>
-            <option value="aguardando">⏳ Aguardando</option>
-            <option value="atrasado">⚠️ Atrasado</option>
-            <option value="entregue">✔ Entregue</option>
+            <option value="aguardando">Aguardando</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="entregue">Entregue</option>
           </select>
         </div>
       </div>
 
       <div class="timeline" id="lv-timeline"></div>
       <div id="lv-empty" class="empty-state" style="display:none">
-        <div class="glyph">🧺</div>
+        <div class="glyph">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.4">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
         <strong>Nenhuma remessa encontrada</strong>
         <p>Ajuste os filtros de busca ou registre uma nova saída acima.</p>
       </div>
     </div>
   </section>
 
+  <!-- Brindes -->
   <section id="panel-brindes" class="panel">
     <div class="module-head">
-      <h1 class="module-title">Controle de Brindes e Materiais</h1>
+      <h1 class="module-title">Controle de brindes e materiais</h1>
       <p class="module-sub">Monitore o estoque do time comercial e ajuste quantidades.</p>
     </div>
 
-    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
-      <div class="stat-card" style="--accent:var(--amber)">
+    <!-- Alerta de estoque crítico -->
+    <div class="card" id="bd-alerta-estoque" style="display:none; border-left:4px solid var(--danger); background:var(--danger-light)">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--danger)">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <strong style="color:var(--danger); font-size:0.95rem">Atenção: estoque crítico</strong>
+      </div>
+      <p style="margin:0 0 10px; color:#991B1B; font-size:0.85rem" id="bd-alerta-msg"></p>
+      <div id="bd-alerta-lista" style="display:flex; flex-wrap:wrap; gap:6px"></div>
+    </div>
+
+    <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card">
         <div class="stat-label">Itens cadastrados</div>
         <div class="stat-value" id="bd-total-itens">0</div>
       </div>
@@ -171,24 +220,37 @@
         <div class="stat-label">Peças em estoque</div>
         <div class="stat-value" id="bd-total-estoque">0</div>
       </div>
+      <div class="stat-card" style="--accent:var(--amber)">
+        <div class="stat-label">Estoque baixo</div>
+        <div class="stat-value" id="bd-estoque-baixo">0</div>
+      </div>
+      <div class="stat-card" style="--accent:var(--danger)">
+        <div class="stat-label">Zerados</div>
+        <div class="stat-value" id="bd-zerados">0</div>
+      </div>
     </div>
 
     <div class="card">
-      <h2 class="card-title">🎁 Movimentar estoque</h2>
+      <h2 class="card-title">Movimentar estoque</h2>
       <p class="card-sub">Registre um novo brinde ou ajuste a quantidade de um item existente.</p>
       <form id="form-brinde" class="form-grid">
         <div class="field">
           <label for="bd-item">Item / brinde</label>
           <div class="row-inline">
             <select id="bd-item" required></select>
-            <button type="button" class="btn-add-opt" id="btn-open-modal-bd" title="Cadastrar novo brinde com unidade">+</button>
+            <button type="button" class="btn-add-opt" id="btn-open-modal-bd" title="Cadastrar novo brinde com unidade">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
           </div>
         </div>
         <div class="field">
           <label for="bd-tipo">Movimentação</label>
           <select id="bd-tipo">
-            <option value="entrada">Entrada (+)</option>
-            <option value="saida">Saída (−)</option>
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
           </select>
         </div>
         <div class="field">
@@ -200,14 +262,34 @@
           <select id="bd-unidade" class="select-unidade-dynamic"></select>
         </div>
         <div class="field">
-          <button type="submit" class="btn btn-primary amber">💾 Salvar no estoque</button>
+          <button type="submit" class="btn btn-primary amber">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Salvar no estoque
+          </button>
         </div>
       </form>
     </div>
 
     <div class="card">
-      <h2 class="card-title">📦 Inventário de materiais disponíveis</h2>
-      <p class="card-sub">Itens com menos de 5 unidades em estoque são sinalizados.</p>
+      <div class="card-head-filter">
+        <div>
+          <h2 class="card-title">Inventário de materiais disponíveis</h2>
+          <p class="card-sub">Itens com menos de 5 unidades em estoque são sinalizados.</p>
+        </div>
+        <div class="filters-row">
+          <input type="text" id="bd-search" placeholder="Buscar item..." class="input-search" style="min-width:180px">
+          <select id="bd-filter-status" class="select-filter">
+            <option value="todos">Todos os status</option>
+            <option value="ok">OK</option>
+            <option value="baixo">Estoque baixo</option>
+            <option value="zerado">Zerado</option>
+          </select>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -217,75 +299,90 @@
         </table>
       </div>
       <div id="bd-empty" class="empty-state" style="display:none">
-        <div class="glyph">🎁</div>
+        <div class="glyph">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.4">
+            <polyline points="20 12 20 22 4 22 4 12"></polyline>
+            <rect x="2" y="7" width="20" height="5"></rect>
+            <line x1="12" y1="22" x2="12" y2="7"></line>
+            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+          </svg>
+        </div>
         <strong>Nenhum brinde cadastrado</strong>
         <p>Adicione um item acima para começar a controlar o estoque.</p>
       </div>
     </div>
   </section>
-
 </main>
 
+<!-- Modal Novo Item -->
 <div class="modal-backdrop" id="modal-novo-item">
   <div class="modal">
-    <h3 id="modal-item-title">Cadastrar Novo Item</h3>
+    <h3 id="modal-item-title">Cadastrar novo item</h3>
     <p>Insira o nome do material e defina a sua unidade de medida padrão.</p>
     <input type="hidden" id="modal-item-origem" value="lavanderia">
     <div class="field">
       <label for="new-item-nome">Nome do item / roupa / brinde</label>
-      <input type="text" id="new-item-nome" placeholder="Ex: Lençol Marrom, MOP Branco..." required>
+      <input type="text" id="new-item-nome" placeholder="Ex: Lençol marrom, MOP branco..." required>
     </div>
     <div class="field">
-      <label for="new-item-unidade">Unidade Padrão</label>
+      <label for="new-item-unidade">Unidade padrão</label>
       <select id="new-item-unidade" class="select-unidade-dynamic"></select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="modal-item-cancelar">Cancelar</button>
-      <button class="btn btn-primary" id="modal-item-salvar">Salvar no Banco</button>
+      <button class="btn btn-primary" id="modal-item-salvar">Salvar no banco</button>
     </div>
   </div>
 </div>
 
+<!-- Modal Editar Item -->
 <div class="modal-backdrop" id="modal-editar-item">
   <div class="modal">
-    <h3>Editar Material</h3>
+    <h3>Editar material</h3>
     <p>Altere o nome ou a unidade padrão cadastrada para este item.</p>
     <input type="hidden" id="edit-item-id">
     <input type="hidden" id="edit-item-tipo">
     <div class="field">
-      <label for="edit-item-nome">Nome do Material</label>
+      <label for="edit-item-nome">Nome do material</label>
       <input type="text" id="edit-item-nome" required>
     </div>
     <div class="field">
-      <label for="edit-item-unidade">Unidade Padrão</label>
+      <label for="edit-item-unidade">Unidade padrão</label>
       <select id="edit-item-unidade" class="select-unidade-dynamic"></select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="edit-item-cancelar">Cancelar</button>
-      <button class="btn btn-primary" id="edit-item-salvar">Atualizar Cadastro</button>
+      <button class="btn btn-primary" id="edit-item-salvar">Atualizar cadastro</button>
     </div>
   </div>
 </div>
 
+<!-- Modal Gerenciador -->
 <div class="modal-backdrop" id="modal-gerenciador">
   <div class="modal modal-wide">
     <div class="modal-head">
-      <h3>⚙️ Gerenciador de Cadastros</h3>
-      <button class="btn-close" id="btn-close-gerenciador">✕</button>
+      <h3>Gerenciador de cadastros</h3>
+      <button class="btn-close" id="btn-close-gerenciador">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
     
     <div class="subtabs">
-      <button class="subtab-btn active" data-subtab="subtab-lavanderia">🧺 Lavanderia</button>
-      <button class="subtab-btn" data-subtab="subtab-brindes">🎁 Brindes</button>
-      <button class="subtab-btn" data-subtab="subtab-unidades">📐 Unidades</button>
+      <button class="subtab-btn active" data-subtab="subtab-lavanderia">Lavanderia</button>
+      <button class="subtab-btn" data-subtab="subtab-brindes">Brindes</button>
+      <button class="subtab-btn" data-subtab="subtab-unidades">Unidades</button>
     </div>
 
     <div id="subtab-lavanderia" class="subtab-content active">
-      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Materiais cadastrados para a Lavanderia.</p>
+      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Materiais cadastrados para a lavanderia.</p>
       <div class="table-wrap" style="max-height: 280px; overflow-y: auto;">
         <table>
           <thead>
-            <tr><th>Nome do Material</th><th>Unidade Padrão</th><th style="text-align:right">Ações</th></tr>
+            <tr><th>Nome do material</th><th>Unidade padrão</th><th style="text-align:right">Ações</th></tr>
           </thead>
           <tbody id="tbl-gerenciar-lavanderia"></tbody>
         </table>
@@ -293,11 +390,11 @@
     </div>
 
     <div id="subtab-brindes" class="subtab-content">
-      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Materiais cadastrados para Brindes.</p>
+      <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Materiais cadastrados para brindes.</p>
       <div class="table-wrap" style="max-height: 280px; overflow-y: auto;">
         <table>
           <thead>
-            <tr><th>Nome do Material</th><th>Unidade Padrão</th><th style="text-align:right">Ações</th></tr>
+            <tr><th>Nome do material</th><th>Unidade padrão</th><th style="text-align:right">Ações</th></tr>
           </thead>
           <tbody id="tbl-gerenciar-brindes"></tbody>
         </table>
@@ -307,22 +404,22 @@
     <div id="subtab-unidades" class="subtab-content">
       <p style="margin-bottom: 12px; font-size: .85rem; color: var(--text-muted);">Adicione ou remova unidades de medida do sistema.</p>
       <div class="form-grid" style="grid-template-columns: 2fr auto; gap: 8px; margin-bottom: 16px;">
-        <input type="text" id="new-unit-input" placeholder="Ex: Litro, Caixa, Rolo...">
-        <button class="btn btn-primary btn-sm" id="btn-add-unidade">+ Adicionar Unidade</button>
+        <input type="text" id="new-unit-input" placeholder="Ex: Litro, caixa, rolo...">
+        <button class="btn btn-primary btn-sm" id="btn-add-unidade">Adicionar unidade</button>
       </div>
       <div class="table-wrap" style="max-height: 200px; overflow-y: auto;">
         <table>
           <thead>
-            <tr><th>Unidade de Medida</th><th style="text-align:right">Ação</th></tr>
+            <tr><th>Unidade de medida</th><th style="text-align:right">Ação</th></tr>
           </thead>
           <tbody id="tbl-gerenciar-unidades"></tbody>
         </table>
       </div>
     </div>
-
   </div>
 </div>
 
+<!-- Modal Retorno -->
 <div class="modal-backdrop" id="modal-retorno">
   <div class="modal">
     <h3>Registrar retorno</h3>
@@ -342,6 +439,19 @@
   </div>
 </div>
 
+<!-- Modal Confirmação (novo) -->
+<div class="modal-backdrop" id="modal-confirm">
+  <div class="modal">
+    <h3 id="modal-confirm-title">Confirmar ação</h3>
+    <p id="modal-confirm-msg">Deseja continuar?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modal-confirm-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="modal-confirm-sim" style="background:var(--danger)">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
 <div class="toast-stack" id="toast-stack"></div>
 
 <script src="script.js"></script>
